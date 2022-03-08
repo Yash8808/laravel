@@ -1,0 +1,57 @@
+version: 0.2
+env:
+  variables:
+    ECR_REGISTRY: public.ecr.aws/c4u4g3r8
+    REPOSITORY_URI: public.ecr.aws/c4u4g3r8/mydockerrepo
+    EKS_CLUSTER: "dc-cluster"
+
+
+
+phases:
+  
+  
+  install: # Install AWS cli, kubectl and Helm
+    commands:
+       - apt update
+       - curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/kubectl
+       - chmod +x kubectl
+       - mv ./kubectl /usr/local/bin/kubectl
+       - curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.11.5/2018-12-06/bin/linux/amd64/aws-iam-authenticator
+       - chmod +x aws-iam-authenticator
+       - mv aws-iam-authenticator /usr/bin/aws-iam-authenticator
+       - wget -O helm.tar.gz https://get.helm.sh/helm-v3.5.4-linux-amd64.tar.gz
+       - tar -zxvf helm.tar.gz
+       - chmod +x ./linux-amd64/helm
+       - mv ./linux-amd64/helm /usr/local/bin/helm
+
+
+  pre_build: # Add kubeconfig to access to EKS cluster
+    commands:
+
+      - echo Logging in to Amazon ECR...
+
+      - aws ecr-public get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+      - aws configure set aws_access_key_id $ACCESS_KEY_ID
+      - aws configure set aws_secret_access_key $SECRET_ACCESS_KEY
+      - aws eks --region us-east-1 update-kubeconfig --name $EKS_CLUSTER
+  
+  
+  
+  
+  build: # Build Docker image and tag it with the commit sha
+    commands:
+
+      - docker build -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - helm upgrade h1 ./dc --set image.tag=$IMAGE_TAG --install
+     
+      
+  
+  post_build: # Push the Docker image to the ECR
+    commands:
+      - echo Done
+     
+     

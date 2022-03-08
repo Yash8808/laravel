@@ -1,0 +1,32 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: dc-cluster
+  region: us-east-1
+iam:
+  serviceRoleARN: "arn:aws:iam::484478223226:role/Ekscluster"
+vpc:
+  id: "vpc-07b06fa6e7699bae7"
+  cidr: "10.0.0.0/16"
+  subnets:
+    public:
+      public-1:
+          id: "subnet-056b75d9602747532"
+          cidr: "10.0.1.0/24"
+      public-2:
+          id: "subnet-0425c82f367274d68"
+          cidr: "10.0.2.0/24"
+      public-3:
+          id: "subnet-0ce2469790ab5b926"
+          cidr: "10.0.3.0/24"
+
+
+managedNodeGroups:
+  - name: eks-ng
+    instanceType: t2.micro
+    instanceName: custom-node-name
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 2
+    iam:
+      instanceRoleARN: "arn:aws:iam::484478223226:instance-profile/eksworker"
